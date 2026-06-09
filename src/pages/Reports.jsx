@@ -20,7 +20,7 @@ const rLang = {
     t2: "ລາຍລະອຽດສະຫຸບ", totalIncome: "ລາຍຮັບທັງໝົດ", txCount: "ຈຳນວນລາຍການ", txUnit: "ລາຍການ",
     maxExp: "ລາຍການທີ່ແພງທີ່ສຸດ", minExp: "ລາຍການທີ່ຖືກທີ່ສຸດ", totalExp: "ລວມຍອດທັງໝົດ",
     pieTitle: "ສັດສ່ວນການໃຊ້ຈ່າຍ", net: "ຄົງເຫຼືອສຸດທິ", centerLabel: "ລວມ",
-    preview: "ເບິ່ງຕົວຢ່າງ", close: "ປິດ",
+    preview: "ເບິ່ງຕົວຢ່າງລາຍງານ", close: "ປິດຕົວຢ່າງ",
     months: ["","ມັງກອນ","ກຸມພາ","ມີນາ","ເມສາ","ພຶດສະພາ","ມິຖຸນາ","ກໍລະກົດ","ສິງຫາ","ກັນຍາ","ຕຸລາ","ພະຈິກ","ທັນວາ"],
   },
   en: {
@@ -30,7 +30,7 @@ const rLang = {
     t2: "Summary Details", totalIncome: "Total Income", txCount: "Total Transactions", txUnit: "items",
     maxExp: "Most Expensive", minExp: "Least Expensive", totalExp: "Total Expenses",
     pieTitle: "Expense Breakdown", net: "Net Balance", centerLabel: "Total",
-    preview: "Preview Report", close: "Close",
+    preview: "Preview Report", close: "Close Preview",
     months: ["","January","February","March","April","May","June","July","August","September","October","November","December"],
   },
 };
@@ -96,13 +96,17 @@ function SectionTitle({ children }) {
   );
 }
 
+// ─── Report Card — มี id="report-print" สำหรับ PDF ───────────
 function ReportCard({ reportData, lang }) {
   const tr = rLang[lang];
   const { username, monthIndex, year, totalIncome, totalExpense, transactionCount, maxExpense, minExpense, categories } = reportData;
-  const net = totalIncome - totalExpense;
+  const net    = totalIncome - totalExpense;
   const colors = generateColors(categories.length);
+
   return (
-    <div style={{ background: "#fff", borderRadius: 20, overflow: "hidden", boxShadow: "0 2px 16px rgba(58,125,94,0.10)" }}>
+    <div id="report-print" style={{ background: "#fff", borderRadius: 20, overflow: "hidden", boxShadow: "0 2px 16px rgba(58,125,94,0.10)" }}>
+
+      {/* Header */}
       <div style={{ background: `linear-gradient(135deg, ${C.header}, ${C.headerLight})`, padding: "20px 20px 16px", textAlign: "center" }}>
         <div style={{ fontSize: 15, fontWeight: 800, color: "#fff" }}>{tr.title}</div>
         <div style={{ fontSize: 11, color: "rgba(255,255,255,0.8)", marginTop: 2 }}>{tr.subtitle}</div>
@@ -118,7 +122,10 @@ function ReportCard({ reportData, lang }) {
           </div>
         </div>
       </div>
+
       <div style={{ padding: "16px 16px 20px" }}>
+
+        {/* Table 1 */}
         <SectionTitle>{tr.t1}</SectionTitle>
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 18, fontSize: 12 }}>
           <thead>
@@ -147,6 +154,8 @@ function ReportCard({ reportData, lang }) {
             </tr>
           </tbody>
         </table>
+
+        {/* Table 2 */}
         <SectionTitle>{tr.t2}</SectionTitle>
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 18, fontSize: 12 }}>
           <tbody>
@@ -164,8 +173,12 @@ function ReportCard({ reportData, lang }) {
             ))}
           </tbody>
         </table>
+
+        {/* Pie */}
         <SectionTitle>{tr.pieTitle}</SectionTitle>
         <PieChart data={categories} centerLabel={tr.centerLabel} />
+
+        {/* Net */}
         <div style={{ marginTop: 16, background: net >= 0 ? C.totalBg : "#fdf0f0", borderRadius: 12, padding: "14px 16px", display: "flex", justifyContent: "space-between", alignItems: "center", border: `1px solid ${net >= 0 ? C.border : "#f5c6c6"}` }}>
           <span style={{ fontSize: 13, fontWeight: 700, color: C.value }}>🌿 {tr.net}</span>
           <span style={{ fontSize: 20, fontWeight: 800, color: net >= 0 ? C.totalText : "#c0392b" }}>
@@ -177,6 +190,7 @@ function ReportCard({ reportData, lang }) {
   );
 }
 
+// ─── Main ─────────────────────────────────────────────────────
 export default function Reports({ refreshKey }) {
   const { user, lang: appLang } = useAuth();
   const tr = t[appLang];
@@ -216,15 +230,15 @@ export default function Reports({ refreshKey }) {
   };
 
   const buildReportData = () => {
-    const filtered  = getFiltered();
-    const now       = new Date();
-    const expenses  = filtered.filter(tx => tx.type === "expense");
-    const incomes   = filtered.filter(tx => tx.type === "income");
+    const filtered     = getFiltered();
+    const now          = new Date();
+    const expenses     = filtered.filter(tx => tx.type === "expense");
+    const incomes      = filtered.filter(tx => tx.type === "income");
     const totalIncome  = incomes.reduce((s, tx) => s + Number(tx.amount || 0), 0);
     const totalExpense = expenses.reduce((s, tx) => s + Number(tx.amount || 0), 0);
-    const amounts   = expenses.map(tx => Number(tx.amount || 0));
-    const maxExpense = amounts.length ? Math.max(...amounts) : 0;
-    const minExpense = amounts.length ? Math.min(...amounts) : 0;
+    const amounts      = expenses.map(tx => Number(tx.amount || 0));
+    const maxExpense   = amounts.length ? Math.max(...amounts) : 0;
+    const minExpense   = amounts.length ? Math.min(...amounts) : 0;
     const catMap = {};
     expenses.forEach(tx => { const cat = tx.category || "Other"; catMap[cat] = (catMap[cat] || 0) + Number(tx.amount || 0); });
     const categories = Object.entries(catMap).map(([name, amount]) => ({ name, amount })).sort((a, b) => b.amount - a.amount);
@@ -262,7 +276,14 @@ export default function Reports({ refreshKey }) {
     a.href = url; a.download = `report_${rd.username}_${rd.year}_${rd.monthIndex}.csv`; a.click();
   };
 
-  const handleExportPDF = () => { setShowReport(true); setTimeout(() => window.print(), 600); };
+  // PDF — แสดง report ก่อน แล้วค่อย print
+  const handleExportPDF = async () => {
+    if (!showReport) {
+      setShowReport(true);
+      await new Promise(r => setTimeout(r, 600));
+    }
+    window.print();
+  };
 
   const reportData = buildReportData();
 
@@ -270,7 +291,11 @@ export default function Reports({ refreshKey }) {
     const d = new Date(); d.setMonth(d.getMonth() - (5 - i));
     const m = d.getMonth(), y = d.getFullYear();
     const f = transactions.filter(tx => { const td = new Date(tx.date); return td.getMonth() === m && td.getFullYear() === y; });
-    return { label: d.toLocaleString("default", { month: "short" }), inc: f.filter(tx => tx.type === "income").reduce((s, tx) => s + Number(tx.amount || 0), 0), exp: f.filter(tx => tx.type === "expense").reduce((s, tx) => s + Number(tx.amount || 0), 0) };
+    return {
+      label: d.toLocaleString("default", { month: "short" }),
+      inc: f.filter(tx => tx.type === "income").reduce((s, tx) => s + Number(tx.amount || 0), 0),
+      exp: f.filter(tx => tx.type === "expense").reduce((s, tx) => s + Number(tx.amount || 0), 0),
+    };
   });
   const maxVal = Math.max(...monthlyData.map(d => Math.max(d.inc, d.exp)), 1);
 
@@ -280,6 +305,7 @@ export default function Reports({ refreshKey }) {
     <div style={{ padding: "16px 14px 0" }}>
       <div style={{ fontSize: 16, fontWeight: 800, color: "#111827", marginBottom: 12 }}>{tr.reports}</div>
 
+      {/* Summary */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
         <div style={{ flex: 1, background: "#f0fdf4", borderRadius: 14, padding: 12 }}>
           <div style={{ fontSize: 11, color: "#6b7280" }}>{tr.income}</div>
@@ -291,6 +317,7 @@ export default function Reports({ refreshKey }) {
         </div>
       </div>
 
+      {/* Bar Chart */}
       <div style={{ background: "#fff", borderRadius: 16, padding: 16, boxShadow: "0 1px 6px rgba(0,0,0,0.07)", marginBottom: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: "#374151", marginBottom: 12 }}>{tr.monthly}</div>
         <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 120 }}>
@@ -310,9 +337,11 @@ export default function Reports({ refreshKey }) {
         </div>
       </div>
 
+      {/* Export Section */}
       <div style={{ background: "#fff", borderRadius: 16, padding: 16, boxShadow: "0 1px 6px rgba(0,0,0,0.07)", marginBottom: 12 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: C.value, marginBottom: 12 }}>💾 {tr.exportData}</div>
 
+        {/* Lang */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.label, marginBottom: 6 }}>🌐 ພາສາ / Language</div>
           <div style={{ display: "flex", gap: 8 }}>
@@ -325,6 +354,7 @@ export default function Reports({ refreshKey }) {
           </div>
         </div>
 
+        {/* Range */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 600, color: C.label, marginBottom: 6 }}>📅 {tr.exportRange}</div>
           {[["thisMonth", tr.thisMonthOnly],["last3", tr.last3],["thisYear", tr.thisYear],["custom", tr.custom]].map(([val, label]) => (
@@ -341,22 +371,32 @@ export default function Reports({ refreshKey }) {
           )}
         </div>
 
+        {/* Preview count */}
         <div style={{ background: C.row1, borderRadius: 10, padding: "10px 14px", marginBottom: 12, display: "flex", justifyContent: "space-between" }}>
           <span style={{ fontSize: 13, color: C.label }}>👁 {tr.preview}</span>
           <span style={{ fontSize: 13, fontWeight: 700, color: C.header }}>{getFiltered().length} {tr.records}</span>
         </div>
 
+        {/* Buttons */}
         <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={handleExportPDF}  style={{ flex: 1, padding: "12px", border: "none", borderRadius: 12, background: C.header,      color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>📄 PDF</button>
-          <button onClick={handleExportCSV}  style={{ flex: 1, padding: "12px", border: "none", borderRadius: 12, background: C.headerLight, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>📊 Excel/CSV</button>
+          <button onClick={handleExportPDF}
+            style={{ flex: 1, padding: "12px", border: "none", borderRadius: 12, background: C.header, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+            📄 PDF
+          </button>
+          <button onClick={handleExportCSV}
+            style={{ flex: 1, padding: "12px", border: "none", borderRadius: 12, background: C.headerLight, color: "#fff", fontWeight: 700, fontSize: 13, cursor: "pointer" }}>
+            📊 Excel/CSV
+          </button>
         </div>
       </div>
 
+      {/* Toggle Preview */}
       <button onClick={() => setShowReport(v => !v)}
         style={{ width: "100%", padding: "12px", border: `1.5px solid ${C.border}`, borderRadius: 12, background: "#fff", color: C.header, fontWeight: 700, fontSize: 13, cursor: "pointer", marginBottom: 12 }}>
         👁 {showReport ? rLang[exportLang].close : rLang[exportLang].preview}
       </button>
 
+      {/* Report Card */}
       {showReport && (
         <div style={{ marginBottom: 20 }}>
           <ReportCard reportData={reportData} lang={exportLang} />
